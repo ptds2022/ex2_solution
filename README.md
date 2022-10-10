@@ -1,11 +1,17 @@
 # Exercise 2
 
+
+
 ## Objectives :full_moon_with_face: 
 - Learn how program effectively using if/else and iterations statements;
 - Become familiar with using data frame objects and other data structures;
 - Use some matrix calculus in R.
 
+
+
 ## Content :rocket: 
+
+
 
 ### Problem 1: Are you a power?
 Write a program that prints the numbers from 1 to 100, but with the specific requirement:
@@ -19,6 +25,32 @@ An example of the output would be:
 ```{r}
 "1^2, 1^3" "2" "3" "2^2" "5" "6" "7" "2^3" "3^2" "10" "11" "12" "13" "14" "15" "4^2" "17" "18", ...
 ```
+
+
+### Problem 1: solution
+
+Below is a possible solution for "Are you a power?". The `%in%` returns `TRUE` if the element belongs to the set, or `FALSE` otherwise.
+
+
+```{r}
+numbers <- character(100)
+squares <- (1:10)^2
+cubes <- (1:4)^3
+for (k in 1 : length(numbers)) {
+  if (k %in% squares && k %in% cubes) {
+    numbers[k] <- paste0(which(squares == k), "^2, ", which(cubes == k), "^3")
+  } else if (k %in% squares) {
+    numbers[k] <- paste0(which(squares == k), "^2")
+  } else if (k %in% cubes) {
+    numbers[k] <- paste0(which(cubes == k), "^3")
+  } else {
+    numbers[k] <- k
+  }
+}
+numbers
+```
+
+
 ### Problem 2: Stock price and European call option
 
 Let a stock price at time $t$ be $S(t) \equiv S_t$. Assume that $S(t)$ follows a Geometric Brownian Motion (GBM) given by:
