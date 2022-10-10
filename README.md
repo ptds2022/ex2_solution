@@ -188,9 +188,90 @@ Suppose that you are working in an investment firm company as a quantitative ana
 
 Therefore, your boss requires that you compute all possible portfolios that satisfy the client's constraints, represent them graphically as (for example) in the graph below and find the weight of the best (i.e. minimum variance) portfolio.
 
-<img src="hw2_Pr4_portfolio.png" alt="map" width="600px"/>
+<img src="pr3_portfolio_cloud.png" alt="map" width="600px"/>
 
 Using the dataset `stocks.rds`, fulfill the task. Hint: you may want to use the formulas and code [here](https://smac-group.github.io/ds/section-data.html#section-example-portfolio-optimization) for constructing the portfolios.
+
+
+
+### Problem 3: solution
+
+The problem and its solution is based on the [Example: Portfolio Optimization](https://smac-group.github.io/ds/data.html#example-portfolio-optimization) from [Statistical Programming Methods](https://smac-group.github.io/ds/).
+
+In this solution, we make use of matrices to represent the omega, variance, and mean of the investment. Using indexing, we can compute omega star and place it into the matrix of omega. After computing the matrices, we remove the NA values that were not used in the computation. We then compute the minimum profile using the condition the client gave us. 
+
+```{r}
+library(quantmod)
+library(rvest)
+sp500 <- read_html("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies")
+sp500 %>%
+  html_nodes(".text") %>%
+  html_text() -> ticker_sp500
+SP500_symbol <- ticker_sp500[(1:499)*2+1]
+SP500_symbol[SP500_symbol == "BRK.B"] <- "BRK-B"
+SP500_symbol[SP500_symbol == "BF.B"] <- "BF-B"
+today <- Sys.Date()
+three_year_ago <- seq(today, length = 2, by = "-3 year")[2]
+getSymbols(SP500_symbol, from = three_year_ago, to = today)
+nb_sym <- length(SP500_symbol)
+omega_invest <- var_invest <- mean_invest <- matrix(NA, nb_sym, nb_sym)
+dimnames(omega_invest) <- dimnames(var_invest) <- dimnames(mean_invest) <- list(SP500_symbol, SP500_symbol)
+for (i in 1:(nb_sym-1)){
+  for (j in (i+1):nb_sym){
+    stock1 <- get(SP500_symbol[i])
+    stock2 <- get(SP500_symbol[j])
+    Ra <- na.omit(ClCl(stock1))
+    Rn <- na.omit(ClCl(stock2))
+    # Estimation of mu and Sigma
+    Sigma <- cov(cbind(Ra, Rn))
+    mu <- c(mean(Ra), mean(Rn))
+    # Compute omega^*
+    omega_invest[i, j] <- omega_star <- (Sigma[2, 2] - Sigma[1, 2])/(Sigma[1, 1] + Sigma[2, 2] - 2*Sigma[1, 2])
+    # Compute investment expected value and variance
+    mean_invest[i, j] <- omega_star*mu[1] + (1 - omega_star)*mu[2]
+    var_invest[i, j] <- omega_star^2*Sigma[1,1] + (1 - omega_star)^2*Sigma[2,2] +
+      2*omega_star*(1 - omega_star)*Sigma[1,2]
+  }
+}
+var_graph <- sqrt(na.omit(as.vector(var_invest)))
+exp_graph <- na.omit(as.vector(mean_invest))
+omega_graph <- na.omit(as.vector(omega_invest))
+cond <- omega_graph < 0.6 & omega_graph > 0.4
+risk_possible = var_graph[cond]
+exp_possible = exp_graph[cond]
+# minimum risk
+min_risk = which.min(risk_possible)
+col_possible = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 0.1)[2]
+col_possible_leg = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 0.4)[2]
+col_best = hcl(h = seq(15, 375, length = 3), l = 65, c = 100, alpha = 1)[1]
+plot(NA, xlim = range(risk_possible),
+     ylim = range(exp_possible),
+     xlab = "Investement Daily Risk",
+     ylab = "Investement Daily Expected Returns")
+grid()
+points(risk_possible, exp_possible, pch = 16, col = col_possible[1])
+points(risk_possible[min_risk], exp_possible[min_risk], pch = 16, col = col_best[1])
+legend("topright", c("Possible portfolio","Min-variance portfolio"),
+       pch = 16, col = c(col_possible_leg[1], col_best[1]),
+       bty = "n")
+min_risk = which.min(risk_possible)
+min_var = risk_possible[min_risk]
+min_return = exp_possible[min_risk]
+row_col = which(sqrt(var_invest)==min_var, arr.ind=TRUE)
+stock1 = row.names(var_invest)[row_col[1]] # MRK
+stock2 = row.names(var_invest)[row_col[2]] # WMT
+amount1 = omega_invest[row_col[1], row_col[2]] # 0.4460958
+amount2 = 1 - amount1 # 0.5539042
+```
+
+
+In case some of you were wondering, here is the "best" portfolio obtained for the last question of homework 2:
+ 
+- `r stock1` (`r amount1*100` %) and `r stock2` (`r amount2*100`%)
+- Mean return of `r min_return` 
+- Risk of `r min_var` 
+
+
 
 ### Problem 4: solving a maze
 Follow instructions and exercise 4 provided [here](https://intro-to-ds.netlify.app/chapter2).
